@@ -1,48 +1,64 @@
+import time
+
 import streamlit as st
+
 from utils.report_generator import generate_report
+from utils.ui import add_activity, apply_premium_theme, empty_state, render_fab, render_sidebar_controls
 
-with st.container(border=True):
 
-    col1, col2 = st.columns([2,1])
+apply_premium_theme()
+render_sidebar_controls()
+render_fab()
 
-    with col1:
-        st.markdown("""
-        ## 📄 AI Generated Report
-        
-        Generate a complete AI-powered report from your dataset.
-        Export insights, statistics, and findings in one place.
-        """)
-
-    with col2:
-        st.image("assets/report.svg", width=260)
+st.markdown(
+    """
+    <div class="hero">
+        <div class="eyebrow">Report Center</div>
+        <h1>Package the analysis for handoff.</h1>
+        <p>Generate a report preview, inspect it, and download a clean CSV export.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
 if "df" not in st.session_state:
-    st.warning("Please upload a dataset first.")
-else:
-    df = st.session_state["df"]
+    empty_state("No dataset loaded", "Load data from the main workspace before generating a report.")
+    st.stop()
 
-    if df is None or df.empty:
-        st.warning("Uploaded dataset is empty.")
-    else:
-        st.write("Generate a complete AI analysis report for your dataset.")
+df = st.session_state["df"]
+if df is None or df.empty:
+    empty_state("Dataset is empty", "Reports require a valid dataset.")
+    st.stop()
 
-        st.divider()
+left, right = st.columns([1.2, .8])
+with left:
+    generate = st.button("Generate report", type="primary", width="stretch")
+with right:
+    st.caption("Tip: saved recommendations remain available from the sidebar.")
 
-        # Generate report
-        report = generate_report(df)
+if generate or "report" not in st.session_state:
+    try:
+        progress = st.progress(0, text="Collecting summary data...")
+        for value, label in [(35, "Adding insights..."), (72, "Formatting rows..."), (100, "Ready")]:
+            time.sleep(.18)
+            progress.progress(value, text=label)
+        st.session_state["report"] = generate_report(df)
+        st.toast("Report generated")
+        add_activity("Generated report preview", "success")
+    except Exception as exc:
+        st.error(f"Report generation failed: {exc}")
+        st.toast("Report failed")
+        st.stop()
 
-        st.subheader("Report Preview")
+report = st.session_state["report"]
+st.subheader("Report Preview")
+st.dataframe(report, width="stretch", hide_index=True)
 
-        st.dataframe(report)
-
-        st.divider()
-
-        # Convert to CSV for download
-        csv = report.to_csv(index=False).encode()
-
-        st.download_button(
-            label="⬇ Download AI Report",
-            data=csv,
-            file_name="ai_report.csv",
-            mime="text/csv"
-        )
+csv = report.to_csv(index=False).encode()
+st.download_button(
+    label="Download AI Report",
+    data=csv,
+    file_name="insightai_report.csv",
+    mime="text/csv",
+    width="stretch",
+)

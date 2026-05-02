@@ -1,68 +1,92 @@
+import time
+
 import streamlit as st
-from utils.prediction import sales_prediction
+
 from utils.automl import run_automl
 from utils.deep_learning import run_deep_learning
+from utils.prediction import sales_prediction
+from utils.ui import add_activity, apply_premium_theme, dataset_profile, empty_state, render_fab, render_sidebar_controls
 
-with st.container(border=True):
 
-    col1, col2 = st.columns([2,1])
+apply_premium_theme()
+render_sidebar_controls()
+render_fab()
 
-    with col1:
-        st.markdown("""
-        ##  Machine Learning Predictions
-        
-        Train predictive models on your dataset and discover patterns using AI.
-        InsightAI automatically prepares data and runs machine learning models.
-        """)
+st.markdown(
+    """
+    <div class="hero">
+        <div class="eyebrow">Prediction Studio</div>
+        <h1>Run modeling when you are ready.</h1>
+        <p>Use guided actions for baseline prediction, AutoML comparison, and deep learning feedback.</p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
 
-    with col2:
-        st.image("assets/ml.svg", width=260)
-
-# Check dataset
 if "df" not in st.session_state:
-    st.warning("Please upload a dataset first.")
-else:
-    df = st.session_state["df"]
+    empty_state("No dataset loaded", "Load data first to activate prediction workflows.")
+    st.stop()
 
-    if df is None or df.empty:
-        st.warning("Uploaded dataset is empty.")
-    else:
-        st.write("Run machine learning models on your dataset to generate predictions.")
+df = st.session_state["df"]
+if df is None or df.empty:
+    empty_state("Dataset is empty", "Prediction workflows require a valid dataset.")
+    st.stop()
 
-        st.divider()
+profile = dataset_profile(df)
+if profile["numeric"] == 0:
+    empty_state("No numeric features", "Add numeric columns before running prediction workflows.")
+    st.stop()
 
-        # -----------------------
-        # Basic Prediction
-        # -----------------------
-        st.subheader("📈 Sales / Value Prediction")
+st.subheader("Modeling Actions")
+action_cols = st.columns(3)
 
-        prediction = sales_prediction(df)
+with action_cols[0]:
+    with st.container(border=True):
+        st.markdown("#### Baseline Forecast")
+        st.write("Fast estimate using the existing sales/value prediction utility.")
+        if st.button("Run forecast", type="primary", width="stretch"):
+            with st.spinner("Calculating forecast..."):
+                time.sleep(.3)
+                try:
+                    prediction = sales_prediction(df)
+                    st.success(f"Predicted future value: {prediction}")
+                    st.toast("Forecast complete")
+                    add_activity("Ran baseline forecast", "success")
+                except Exception as exc:
+                    st.error(f"Forecast failed: {exc}")
+                    st.toast("Forecast failed")
 
-        st.success(f"Predicted Future Revenue: {prediction}")
+with action_cols[1]:
+    with st.container(border=True):
+        st.markdown("#### AutoML Selection")
+        st.write("Compare candidate models and surface the best option.")
+        if st.button("Run AutoML", width="stretch"):
+            try:
+                progress = st.progress(0, text="Preparing models...")
+                for value, label in [(35, "Training candidates..."), (70, "Scoring models..."), (100, "Done")]:
+                    time.sleep(.22)
+                    progress.progress(value, text=label)
+                best_model, scores = run_automl(df)
+                st.success(f"Best model: {best_model}")
+                st.dataframe(scores, width="stretch")
+                st.toast("AutoML complete")
+                add_activity("Completed AutoML selection", "success")
+            except Exception as exc:
+                st.error(f"AutoML failed: {exc}")
+                st.toast("AutoML failed")
 
-        st.divider()
-
-        # -----------------------
-        # AutoML Model Selection
-        # -----------------------
-        st.subheader("⚙️ AutoML Model Selection")
-
-        best_model, scores = run_automl(df)
-
-        st.write("Best Model Selected:", best_model)
-
-        st.write("Model Performance Scores")
-        st.dataframe(scores)
-
-        st.divider()
-
-        # -----------------------
-        # Deep Learning Model
-        # -----------------------
-        st.subheader("🧠 Deep Learning Model")
-
-        dl_result = run_deep_learning(df)
-
-        st.write("Neural Network Loss:", dl_result)
-
-        st.info("Lower loss indicates better model performance.")
+with action_cols[2]:
+    with st.container(border=True):
+        st.markdown("#### Neural Check")
+        st.write("Run a lightweight deep learning diagnostic and inspect loss.")
+        if st.button("Run neural check", width="stretch"):
+            try:
+                with st.spinner("Training neural diagnostic..."):
+                    dl_result = run_deep_learning(df)
+                st.success(f"Neural network loss: {dl_result}")
+                st.progress(max(0, min(100, int(100 - float(dl_result) * 10))), text="Model confidence proxy")
+                st.toast("Neural diagnostic complete")
+                add_activity("Ran neural diagnostic", "success")
+            except Exception as exc:
+                st.error(f"Neural diagnostic failed: {exc}")
+                st.toast("Neural check failed")

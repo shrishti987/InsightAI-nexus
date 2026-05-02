@@ -6,5 +6,4 @@ seaborn
 plotly
 scikit-learn
 reportlab
-pandasai
 openai

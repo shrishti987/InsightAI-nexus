@@ -1,0 +1,26 @@
+{
+  "theme": "dark",
+  "bookmarks": [],
+  "recent_activity": [
+    {
+      "message": "Uploaded healthcare_dataset_500.csv",
+      "level": "success",
+      "time": "10:02 AM"
+    },
+    {
+      "message": "Generated insight pack from dashboard",
+      "level": "success",
+      "time": "10:02 AM"
+    },
+    {
+      "message": "Uploaded healthcare_dataset_500.csv",
+      "level": "success",
+      "time": "10:02 AM"
+    },
+    {
+      "message": "Uploaded healthcare_dataset_500.csv",
+      "level": "success",
+      "time": "10:01 AM"
+    }
+  ]
+}
